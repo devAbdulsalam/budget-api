@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 5000;
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const budgetRoutes = require('./routes/budgetRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 // Middleware
 app.use(helmet());
@@ -49,6 +50,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/budgets', budgetRoutes);
 
 // 404 handler
