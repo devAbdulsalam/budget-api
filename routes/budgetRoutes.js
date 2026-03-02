@@ -23,6 +23,8 @@ const {
 	createImage,
 	deleteImage,
 } = require('../controllers/imageController');
+// multer upload middleware configured to store file in memory
+const upload = require('../middleware/multer');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
@@ -51,7 +53,8 @@ router.delete('/tasks/:id', deleteTask);
 
 // Image routes
 router.get('/:budgetId/images', getImages);
-router.post('/:budgetId/images', createImage);
+// use multer memory-storage middleware to handle file upload; field name is "image"
+router.post('/:budgetId/images', upload.single('image'), createImage);
 router.delete('/images/:id', deleteImage);
 
 module.exports = router;

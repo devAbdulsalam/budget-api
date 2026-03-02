@@ -1,5 +1,6 @@
 const Image = require('../models/Image');
 const Budget = require('../models/Budget');
+const cloudinary = require('../config/cloudinary'); // configured instance
 
 // @desc      Get all images for a budget
 // @route     GET /api/budgets/:budgetId/images
@@ -51,11 +52,33 @@ exports.createImage = async (req, res) => {
 				.json({ success: false, message: 'Not authorized' });
 		}
 
-		const image = await Image.create({
-			...req.body,
+		// ensure a file was uploaded by multer
+		if (!req.file) {
+			return res
+				.status(400)
+				.json({ success: false, message: 'No file uploaded' });
+		}
+
+		// upload buffer to Cloudinary
+		const uploadResult = await new Promise((resolve, reject) => {
+			cloudinary.uploader
+				.upload_stream({ folder: 'budget_images' }, (err, result) => {
+					if (err) return reject(err);
+					resolve(result);
+				})
+				.end(req.file.buffer);
+		});
+
+		const imageData = {
 			budgetId: req.params.budgetId,
 			userId: req.user.id,
-		});
+			...req.body,
+			// ensure cloudinary-generated fields override anything in the body
+			imageUrl: uploadResult.secure_url,
+			publicId: uploadResult.public_id,
+		};
+
+		const image = await Image.create(imageData);
 
 		// Add image to budget
 		budget.images.push(image._id);
@@ -87,6 +110,15 @@ exports.deleteImage = async (req, res) => {
 			return res
 				.status(403)
 				.json({ success: false, message: 'Not authorized' });
+		}
+
+		// remove from cloudinary if we have a publicId
+		if (image.publicId) {
+			try {
+				await cloudinary.uploader.destroy(image.publicId);
+			} catch (err) {
+				console.warn('Cloudinary deletion failed', err.message);
+			}
 		}
 
 		await Image.findByIdAndDelete(req.params.id);
