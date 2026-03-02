@@ -61,6 +61,16 @@ app.use((req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
 	console.error(err.stack);
+	// multer errors should return a 400 with a friendly message
+	if (err.name === 'MulterError') {
+		let message = err.message;
+		if (err.code === 'LIMIT_FILE_SIZE') {
+			message = 'File too large. Max size is 5MB.';
+		} else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+			message = 'Only image files are allowed.';
+		}
+		return res.status(400).json({ success: false, message });
+	}
 	res.status(err.status || 500).json({
 		success: false,
 		message: err.message || 'Internal Server Error',
